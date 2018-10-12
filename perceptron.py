@@ -29,51 +29,112 @@
 
 #   32 levels of grey where 0 is white and 31 black
 
-#dict = parser.create_dictionary_for_images("corrupt_data.txt")
-#print(dict["Image2"])
+# dict = parser.create_dictionary_for_images("corrupt_data.txt")
+# print(dict["Image2"])
 
-#dict = parser.create_dictionary_for_labels("correct_answers.txt")
-#print(dict)
+# dict = parser.create_dictionary_for_labels("correct_answers.txt")
+# print(dict)
 
 import sys
 import file_parser as parser
 import numpy as np
 import random
 
-def get_perceptron_output(weights, input_array):
-    sum = 0
-    for i in range(0, 400):
-        sum += weights[i] * input_array[i]
-    return sum + 1
 
-# 400 numbers between 1-1000
-def generate_random_weights():
-    return np.sign(np.array(random.sample(range(-1000, 1000), 400)))
+class Perceptron:
+    weights = []
+    input_data = []
+    bias = 0
+    activation_limit = 0
+    learning_rate = 0.3
 
-def activation_function(value):
-    return 
+    def __init__(self, learning_rate, size_of_input):
+        self.learning_rate = learning_rate
+        self.weights = self.generate_random_weights(size_of_input)
 
-def sigMOD(plox):
-    return np.sign(plox)
+    def calculate_sum(self):
+        sum_of_output = 0
+        for i in range(0, len(self.input_data)):
+            sum_of_output += self.weights[i] * self.input_data[i]
+        return sum_of_output + self.bias
+
+    def generate_random_weights(self, size):
+        weight_list = []
+        for i in range(0, size):
+            weight_list.append(random.uniform(-1, 1))
+        return weight_list
+
+    def calculate_output(self, input_data):
+        self.input_data = input_data
+        activation = self.calculate_sum()
+        return 1 if activation > self.activation_limit else -1
+
+    def learn_from_result(self, output_result, actual_result):
+        error = actual_result - output_result
+        for i in range(0, len(self.weights)):
+            self.weights[i] = self.weights[i] + self.input_data[i] * error * self.learning_rate
+
+    def train(self, input_data, desired_output):
+        guess = self.calculate_output(input_data)
+        self.learn_from_result(guess, desired_output)
+
+
+def get_desired_val_for_happy(val):
+    return 1 if val == 1 else -1
+
+
+def get_desired_val_for_sad(val):
+    return 1 if val == 2 else -1
+
+
+def get_desired_val_for_mischievous(val):
+    return 1 if val == 3 else -1
+
+
+def get_desired_val_for_mad(val):
+    return 1 if val == 4 else -1
 
 
 if __name__ == "__main__":
-
-    if len(sys.argv) != 4:
-        print("Invalid number of arguments")
-        exit()
+    # if len(sys.argv) != 4:
+    #     print("Invalid number of arguments")
+    #     exit()
 
     train_data = sys.argv[1]
     train_data_labels = sys.argv[2]
     test_data = sys.argv[3]
 
-    dict = parser.create_dictionary_for_images("corrupt_data.txt")
+    image_data_dict = parser.create_dictionary_for_images("training.txt")
+    answers = parser.create_dictionary_for_labels("correct_answers.txt")
 
-    weights = generate_random_weights()
-    print("DICTIONARY for Image1",dict['Image1'])
+    learning_rate = 100
+    size_of_data = 400
 
-    result = get_perceptron_output(weights, dict['Image1'])
-    print(result)
-    #perceptron_output = get_perceptron_output(weights, dict['Image1'])
-    print(sigMOD(result))
-   # print(perceptron_output)
+    percept_happy = Perceptron(learning_rate, size_of_data)
+    percept_sad = Perceptron(learning_rate, size_of_data)
+    percept_mischievous = Perceptron(learning_rate, size_of_data)
+    percept_mad = Perceptron(learning_rate, size_of_data)
+
+    for key in image_data_dict:
+        percept_happy.train(image_data_dict[key], get_desired_val_for_happy(answers[key]))
+        percept_sad.train(image_data_dict[key], get_desired_val_for_sad(answers[key]))
+        percept_mischievous.train(image_data_dict[key], get_desired_val_for_mischievous(answers[key]))
+        percept_mad.train(image_data_dict[key], get_desired_val_for_mad(answers[key]))
+
+    num_correct = 0
+
+    correct_answer = 0
+    for key in image_data_dict:
+        if percept_happy.calculate_output(image_data_dict[key]) == 1:
+            correct_answer = 1
+        elif percept_sad.calculate_output(image_data_dict[key]) == 1:
+            correct_answer = 2
+        elif percept_mischievous.calculate_output(image_data_dict[key]) == 1:
+            correct_answer = 3
+        elif percept_mad.calculate_output(image_data_dict[key]) == 1:
+            correct_answer = 4
+
+        if correct_answer == answers[key]:
+            num_correct = num_correct + 1
+
+    print("percept was ", num_correct, " out of", len(answers), "correct after training.")
