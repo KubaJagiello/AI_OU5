@@ -95,6 +95,20 @@ def get_desired_val_for_mad(val):
     return 1 if val == 4 else -1
 
 
+def print_if_not_debug(debug, key, val):
+    if debug:
+        print(str(key) + " " + str(val))
+
+
+def sort_by_image_num(a):
+    return int(a[5:])
+    # if int(a[5:]) > int(b[5:]):
+    #     return 1
+    # elif int(a[5:]) == int(b[5:]):
+    #     return 0
+    # return -1
+
+
 if __name__ == "__main__":
     # if len(sys.argv) != 4:
     #     print("Invalid number of arguments")
@@ -104,37 +118,80 @@ if __name__ == "__main__":
     train_data_labels = sys.argv[2]
     test_data = sys.argv[3]
 
-    image_data_dict = parser.create_dictionary_for_images("training.txt")
-    answers = parser.create_dictionary_for_labels("correct_answers.txt")
+    debug = True
 
-    learning_rate = 100
+    train_data = parser.create_dictionary_for_images(train_data)
+    answers = parser.create_dictionary_for_labels(train_data_labels)
+    test_data = parser.create_dictionary_for_images(test_data)
+
+    for key in train_data:
+        for i in range(0, len(train_data[key])):
+            if train_data[key][i] > 10:
+                train_data[key][i] = 1
+            else:
+                train_data[key][i] = 0
+
+    learning_rate = 0.5
     size_of_data = 400
+
+    size_of_data_hidden = 4
 
     percept_happy = Perceptron(learning_rate, size_of_data)
     percept_sad = Perceptron(learning_rate, size_of_data)
     percept_mischievous = Perceptron(learning_rate, size_of_data)
     percept_mad = Perceptron(learning_rate, size_of_data)
 
-    for key in image_data_dict:
-        percept_happy.train(image_data_dict[key], get_desired_val_for_happy(answers[key]))
-        percept_sad.train(image_data_dict[key], get_desired_val_for_sad(answers[key]))
-        percept_mischievous.train(image_data_dict[key], get_desired_val_for_mischievous(answers[key]))
-        percept_mad.train(image_data_dict[key], get_desired_val_for_mad(answers[key]))
+    percept_happy_hidden = Perceptron(learning_rate, size_of_data_hidden)
+    percept_sad_hidden = Perceptron(learning_rate, size_of_data_hidden)
+    percept_mischievous_hidden = Perceptron(learning_rate, size_of_data_hidden)
+    percept_mad_hidden = Perceptron(learning_rate, size_of_data_hidden)
+
+    for key in train_data:
+        percept_happy.train(train_data[key], get_desired_val_for_happy(answers[key]))
+        percept_sad.train(train_data[key], get_desired_val_for_sad(answers[key]))
+        percept_mischievous.train(train_data[key], get_desired_val_for_mischievous(answers[key]))
+        percept_mad.train(train_data[key], get_desired_val_for_mad(answers[key]))
+
+        
+    for key in train_data:
+        happy_result = percept_happy.calculate_output(train_data[key])
+        sad_result = percept_sad.calculate_output(train_data[key])
+        mis_result = percept_mischievous.calculate_output(train_data[key])
+        mad_result = percept_mad.calculate_output(train_data[key])
+
+        list_of_results = [happy_result, sad_result, mis_result, mad_result]
+
+        percept_happy_hidden.train(list_of_results, get_desired_val_for_happy(answers[key]))
+        percept_sad_hidden.train(list_of_results, get_desired_val_for_sad(answers[key]))
+        percept_mischievous_hidden.train(list_of_results, get_desired_val_for_mischievous(answers[key]))
+        percept_mad_hidden.train(list_of_results, get_desired_val_for_mad(answers[key]))
 
     num_correct = 0
 
+    keys = test_data.keys()
+
+    keys = sorted(keys, key=sort_by_image_num)
+
     correct_answer = 0
-    for key in image_data_dict:
-        if percept_happy.calculate_output(image_data_dict[key]) == 1:
+    for key in keys:
+
+        if percept_happy.calculate_output(test_data[key]) == 1:
+            print_if_not_debug(debug, key, 1)
             correct_answer = 1
-        elif percept_sad.calculate_output(image_data_dict[key]) == 1:
+        elif percept_sad.calculate_output(test_data[key]) == 1:
+            print_if_not_debug(debug, key, 2)
             correct_answer = 2
-        elif percept_mischievous.calculate_output(image_data_dict[key]) == 1:
+        elif percept_mischievous.calculate_output(test_data[key]) == 1:
+            print_if_not_debug(debug, key, 3)
             correct_answer = 3
-        elif percept_mad.calculate_output(image_data_dict[key]) == 1:
+        elif percept_mad.calculate_output(test_data[key]) == 1:
+            print_if_not_debug(debug, key, 4)
             correct_answer = 4
+        else:
+            print_if_not_debug(debug, key, 1)
+            correct_answer = 1
 
-        if correct_answer == answers[key]:
-            num_correct = num_correct + 1
-
-    print("percept was ", num_correct, " out of", len(answers), "correct after training.")
+            #     if correct_answer == answers[key]:
+            #         num_correct = num_correct + 1
+            #
+            # print("percept was ", num_correct, " out of", len(answers), "correct after training.")
