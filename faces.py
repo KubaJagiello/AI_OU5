@@ -42,21 +42,16 @@ import random
 
 
 class Perceptron:
-    weights = []
     input_data = []
-    bias = 0
-    activation_limit = 0
-    learning_rate = 0.3
 
     def __init__(self, learning_rate, size_of_input):
         self.learning_rate = learning_rate
         self.weights = self.generate_random_weights(size_of_input)
+        self.bias = 1
+        self.activation_limit = 0
 
     def calculate_sum(self):
-        sum_of_output = 0
-        for i in range(0, len(self.input_data)):
-            sum_of_output += self.weights[i] * self.input_data[i]
-        return sum_of_output + self.bias
+        return np.dot(self.weights, self.input_data) + self.bias
 
     def generate_random_weights(self, size):
         weight_list = []
@@ -102,17 +97,41 @@ def print_if_not_debug(debug, key, val):
 
 def sort_by_image_num(a):
     return int(a[5:])
-    # if int(a[5:]) > int(b[5:]):
-    #     return 1
-    # elif int(a[5:]) == int(b[5:]):
-    #     return 0
-    # return -1
+
+
+def normalize_list(data):
+    for key2 in data:
+        for i in range(0, len(data[key2])):
+            if data[key2][i] > 10:
+                data[key2][i] = 1
+            else:
+                data[key2][i] = 0
+
+
+def rotate_smiley(list):
+    if not 31 in list[:9]:
+        return 2
+
+    rotate = True
+    for row in list:
+        if 31 in row[:8]:
+            rotate = False
+
+    if rotate:
+        return 3
+
+    rotate = True
+    for row in list:
+        if 31 in row[12:]:
+            rotate = False
+
+    if rotate:
+        return 1
+
+    return 0
 
 
 if __name__ == "__main__":
-    # if len(sys.argv) != 4:
-    #     print("Invalid number of arguments")
-    #     exit()
 
     train_data = sys.argv[1]
     train_data_labels = sys.argv[2]
@@ -125,21 +144,29 @@ if __name__ == "__main__":
     test_data = parser.create_dictionary_for_images(test_data)
 
     for key in train_data:
-        for i in range(0, len(train_data[key])):
-            if train_data[key][i] > 10:
-                train_data[key][i] = 1
-            else:
-                train_data[key][i] = 0
+        train_data[key] = np.reshape(train_data[key], (20, 20))
+        numrots = rotate_smiley(train_data[key])
+        np.rot90(train_data[key], numrots)
+        train_data[key] = train_data[key].ravel()
 
-    learning_rate = 0.1
+    for key in test_data:
+        test_data[key] = np.reshape(test_data[key], (20, 20))
+        numrots = rotate_smiley(test_data[key])
+        np.rot90(test_data[key], numrots)
+        test_data[key] = test_data[key].ravel()
+
+    normalize_list(train_data)
+    normalize_list(test_data)
+
+    learning_rate = 0.2
     size_of_data = 400
 
     size_of_data_hidden = 4
 
-    percept_happy = [Perceptron(learning_rate, size_of_data) for _ in range(0, 10)]
-    percept_sad = [Perceptron(learning_rate, size_of_data) for _ in range(0, 10)]
-    percept_mischievous = [Perceptron(learning_rate, size_of_data) for _ in range(0, 10)]
-    percept_mad = [Perceptron(learning_rate, size_of_data) for _ in range(0, 10)]
+    percept_happy = [Perceptron(learning_rate, size_of_data) for _ in range(0, 12)]
+    percept_sad = [Perceptron(learning_rate, size_of_data) for _ in range(0, 12)]
+    percept_mischievous = [Perceptron(learning_rate, size_of_data) for _ in range(0, 12)]
+    percept_mad = [Perceptron(learning_rate, size_of_data) for _ in range(0, 12)]
 
     percept_happy_hidden = Perceptron(learning_rate, size_of_data_hidden)
     percept_sad_hidden = Perceptron(learning_rate, size_of_data_hidden)
@@ -147,75 +174,45 @@ if __name__ == "__main__":
     percept_mad_hidden = Perceptron(learning_rate, size_of_data_hidden)
 
     for key in train_data:
-        for happy,sad,mis,mad in zip(percept_happy, percept_sad, percept_mischievous, percept_mad):
+        for happy, sad, mis, mad in zip(percept_happy, percept_sad, percept_mischievous, percept_mad):
             happy.train(train_data[key], get_desired_val_for_happy(answers[key]))
             sad.train(train_data[key], get_desired_val_for_sad(answers[key]))
             mis.train(train_data[key], get_desired_val_for_mischievous(answers[key]))
             mad.train(train_data[key], get_desired_val_for_mad(answers[key]))
 
-    for key in train_data:
-        happy_result = percept_happy.calculate_output(train_data[key])
-        sad_result = percept_sad.calculate_output(train_data[key])
-        mis_result = percept_mischievous.calculate_output(train_data[key])
-        mad_result = percept_mad.calculate_output(train_data[key])
-
-        list_of_results = [happy_result, sad_result, mis_result, mad_result]
-
-        percept_happy_hidden.train(list_of_results, get_desired_val_for_happy(answers[key]))
-        percept_sad_hidden.train(list_of_results, get_desired_val_for_sad(answers[key]))
-        percept_mischievous_hidden.train(list_of_results, get_desired_val_for_mischievous(answers[key]))
-        percept_mad_hidden.train(list_of_results, get_desired_val_for_mad(answers[key]))
-
-    for key in train_data:
-        happy_result = percept_happy.calculate_output(train_data[key])
-        sad_result = percept_sad.calculate_output(train_data[key])
-        mis_result = percept_mischievous.calculate_output(train_data[key])
-        mad_result = percept_mad.calculate_output(train_data[key])
-
-        list_of_results = [happy_result, sad_result, mis_result, mad_result]
-
-        happy_result = percept_happy_hidden.calculate_output(list_of_results)
-        sad_result = percept_sad_hidden.calculate_output(list_of_results)
-        mis_result = percept_mischievous_hidden.calculate_output(list_of_results)
-        mad_result = percept_mad_hidden.calculate_output(list_of_results)
-
-    num_correct = 0
-
     keys = test_data.keys()
-
-    keys = sorted(keys, key=sort_by_image_num)
-
+    num_correct = 0
     correct_answer = 0
-    for key in keys:
+    for key in sorted(keys, key=sort_by_image_num):
 
-        happy_result = percept_happy.calculate_output(test_data[key])
-        sad_result = percept_sad.calculate_output(test_data[key])
-        mis_result = percept_mischievous.calculate_output(test_data[key])
-        mad_result = percept_mad.calculate_output(test_data[key])
+        num_happy = 0
+        num_sad = 0
+        num_mis = 0
+        num_mad = 0
 
-        list_of_results = [happy_result, sad_result, mis_result, mad_result]
+        for happy, sad, mis, mad in zip(percept_happy, percept_sad, percept_mischievous, percept_mad):
+            num_happy += happy.calculate_output(test_data[key])
+            num_sad += sad.calculate_output(test_data[key])
+            num_mis += mis.calculate_output(test_data[key])
+            num_mad += mad.calculate_output(test_data[key])
 
-
-
-
-        if percept_happy_hidden.calculate_output(list_of_results) == 1:
-            print_if_not_debug(debug, key, 1)
+        if num_happy > max(num_sad, num_mis, num_mad):
             correct_answer = 1
-        elif percept_sad_hidden.calculate_output(list_of_results) == 1:
-            print_if_not_debug(debug, key, 2)
+        elif num_sad > max(num_mis, num_mad):
             correct_answer = 2
-        elif percept_mischievous_hidden.calculate_output(list_of_results) == 1:
-            print_if_not_debug(debug, key, 3)
+        elif num_mis > num_mad:
             correct_answer = 3
-        elif percept_mad_hidden.calculate_output(list_of_results) == 1:
-            print_if_not_debug(debug, key, 4)
-            correct_answer = 4
         else:
-            print_if_not_debug(debug, key, 1)
-            correct_answer = 1
+            correct_answer = 4
+
+        print_if_not_debug(debug, key, correct_answer)
         if debug:
             if correct_answer == answers[key]:
-                num_correct = num_correct + 1
+                num_correct += 1
+        num_happy = 0
+        num_sad = 0
+        num_mis = 0
+        num_mad = 0
 
     if debug:
         print("percept was ", num_correct, " out of", len(answers), "correct after training.")
