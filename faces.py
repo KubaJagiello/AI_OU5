@@ -96,7 +96,7 @@ def get_desired_val_for_mad(val):
 
 
 def print_if_not_debug(debug, key, val):
-    if debug:
+    if not debug:
         print(str(key) + " " + str(val))
 
 
@@ -131,15 +131,15 @@ if __name__ == "__main__":
             else:
                 train_data[key][i] = 0
 
-    learning_rate = 0.5
+    learning_rate = 0.1
     size_of_data = 400
 
     size_of_data_hidden = 4
 
-    percept_happy = Perceptron(learning_rate, size_of_data)
-    percept_sad = Perceptron(learning_rate, size_of_data)
-    percept_mischievous = Perceptron(learning_rate, size_of_data)
-    percept_mad = Perceptron(learning_rate, size_of_data)
+    percept_happy = [Perceptron(learning_rate, size_of_data) for _ in range(0, 10)]
+    percept_sad = [Perceptron(learning_rate, size_of_data) for _ in range(0, 10)]
+    percept_mischievous = [Perceptron(learning_rate, size_of_data) for _ in range(0, 10)]
+    percept_mad = [Perceptron(learning_rate, size_of_data) for _ in range(0, 10)]
 
     percept_happy_hidden = Perceptron(learning_rate, size_of_data_hidden)
     percept_sad_hidden = Perceptron(learning_rate, size_of_data_hidden)
@@ -147,12 +147,12 @@ if __name__ == "__main__":
     percept_mad_hidden = Perceptron(learning_rate, size_of_data_hidden)
 
     for key in train_data:
-        percept_happy.train(train_data[key], get_desired_val_for_happy(answers[key]))
-        percept_sad.train(train_data[key], get_desired_val_for_sad(answers[key]))
-        percept_mischievous.train(train_data[key], get_desired_val_for_mischievous(answers[key]))
-        percept_mad.train(train_data[key], get_desired_val_for_mad(answers[key]))
+        for happy,sad,mis,mad in zip(percept_happy, percept_sad, percept_mischievous, percept_mad):
+            happy.train(train_data[key], get_desired_val_for_happy(answers[key]))
+            sad.train(train_data[key], get_desired_val_for_sad(answers[key]))
+            mis.train(train_data[key], get_desired_val_for_mischievous(answers[key]))
+            mad.train(train_data[key], get_desired_val_for_mad(answers[key]))
 
-        
     for key in train_data:
         happy_result = percept_happy.calculate_output(train_data[key])
         sad_result = percept_sad.calculate_output(train_data[key])
@@ -166,6 +166,19 @@ if __name__ == "__main__":
         percept_mischievous_hidden.train(list_of_results, get_desired_val_for_mischievous(answers[key]))
         percept_mad_hidden.train(list_of_results, get_desired_val_for_mad(answers[key]))
 
+    for key in train_data:
+        happy_result = percept_happy.calculate_output(train_data[key])
+        sad_result = percept_sad.calculate_output(train_data[key])
+        mis_result = percept_mischievous.calculate_output(train_data[key])
+        mad_result = percept_mad.calculate_output(train_data[key])
+
+        list_of_results = [happy_result, sad_result, mis_result, mad_result]
+
+        happy_result = percept_happy_hidden.calculate_output(list_of_results)
+        sad_result = percept_sad_hidden.calculate_output(list_of_results)
+        mis_result = percept_mischievous_hidden.calculate_output(list_of_results)
+        mad_result = percept_mad_hidden.calculate_output(list_of_results)
+
     num_correct = 0
 
     keys = test_data.keys()
@@ -175,23 +188,34 @@ if __name__ == "__main__":
     correct_answer = 0
     for key in keys:
 
-        if percept_happy.calculate_output(test_data[key]) == 1:
+        happy_result = percept_happy.calculate_output(test_data[key])
+        sad_result = percept_sad.calculate_output(test_data[key])
+        mis_result = percept_mischievous.calculate_output(test_data[key])
+        mad_result = percept_mad.calculate_output(test_data[key])
+
+        list_of_results = [happy_result, sad_result, mis_result, mad_result]
+
+
+
+
+        if percept_happy_hidden.calculate_output(list_of_results) == 1:
             print_if_not_debug(debug, key, 1)
             correct_answer = 1
-        elif percept_sad.calculate_output(test_data[key]) == 1:
+        elif percept_sad_hidden.calculate_output(list_of_results) == 1:
             print_if_not_debug(debug, key, 2)
             correct_answer = 2
-        elif percept_mischievous.calculate_output(test_data[key]) == 1:
+        elif percept_mischievous_hidden.calculate_output(list_of_results) == 1:
             print_if_not_debug(debug, key, 3)
             correct_answer = 3
-        elif percept_mad.calculate_output(test_data[key]) == 1:
+        elif percept_mad_hidden.calculate_output(list_of_results) == 1:
             print_if_not_debug(debug, key, 4)
             correct_answer = 4
         else:
             print_if_not_debug(debug, key, 1)
             correct_answer = 1
+        if debug:
+            if correct_answer == answers[key]:
+                num_correct = num_correct + 1
 
-            #     if correct_answer == answers[key]:
-            #         num_correct = num_correct + 1
-            #
-            # print("percept was ", num_correct, " out of", len(answers), "correct after training.")
+    if debug:
+        print("percept was ", num_correct, " out of", len(answers), "correct after training.")
