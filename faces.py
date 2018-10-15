@@ -118,7 +118,7 @@ def rotate_smiley(list):
             rotate = False
 
     if rotate:
-        return 3
+        return 1
 
     rotate = True
     for row in list:
@@ -126,7 +126,7 @@ def rotate_smiley(list):
             rotate = False
 
     if rotate:
-        return 1
+        return 3
 
     return 0
 
@@ -137,28 +137,30 @@ if __name__ == "__main__":
     train_data_labels = sys.argv[2]
     test_data = sys.argv[3]
 
-    debug = True
+    debug = False
 
     train_data = parser.create_dictionary_for_images(train_data)
-    answers = parser.create_dictionary_for_labels(train_data_labels)
+    training_answers = parser.create_dictionary_for_labels(train_data_labels)
+    if debug:
+        test_answers = parser.create_dictionary_for_labels("test_answers.txt")
     test_data = parser.create_dictionary_for_images(test_data)
 
     for key in train_data:
         train_data[key] = np.reshape(train_data[key], (20, 20))
         numrots = rotate_smiley(train_data[key])
-        np.rot90(train_data[key], numrots)
+        train_data[key] = np.rot90(train_data[key], numrots)
         train_data[key] = train_data[key].ravel()
 
     for key in test_data:
         test_data[key] = np.reshape(test_data[key], (20, 20))
         numrots = rotate_smiley(test_data[key])
-        np.rot90(test_data[key], numrots)
+        test_data[key] = np.rot90(test_data[key], numrots)
         test_data[key] = test_data[key].ravel()
 
     normalize_list(train_data)
     normalize_list(test_data)
 
-    learning_rate = 0.2
+    learning_rate = 1
     size_of_data = 400
 
     size_of_data_hidden = 4
@@ -168,17 +170,13 @@ if __name__ == "__main__":
     percept_mischievous = [Perceptron(learning_rate, size_of_data) for _ in range(0, 12)]
     percept_mad = [Perceptron(learning_rate, size_of_data) for _ in range(0, 12)]
 
-    percept_happy_hidden = Perceptron(learning_rate, size_of_data_hidden)
-    percept_sad_hidden = Perceptron(learning_rate, size_of_data_hidden)
-    percept_mischievous_hidden = Perceptron(learning_rate, size_of_data_hidden)
-    percept_mad_hidden = Perceptron(learning_rate, size_of_data_hidden)
-
-    for key in train_data:
-        for happy, sad, mis, mad in zip(percept_happy, percept_sad, percept_mischievous, percept_mad):
-            happy.train(train_data[key], get_desired_val_for_happy(answers[key]))
-            sad.train(train_data[key], get_desired_val_for_sad(answers[key]))
-            mis.train(train_data[key], get_desired_val_for_mischievous(answers[key]))
-            mad.train(train_data[key], get_desired_val_for_mad(answers[key]))
+    for _ in range(0, 5):
+        for key in train_data:
+            for happy, sad, mis, mad in zip(percept_happy, percept_sad, percept_mischievous, percept_mad):
+                happy.train(train_data[key], get_desired_val_for_happy(training_answers[key]))
+                sad.train(train_data[key], get_desired_val_for_sad(training_answers[key]))
+                mis.train(train_data[key], get_desired_val_for_mischievous(training_answers[key]))
+                mad.train(train_data[key], get_desired_val_for_mad(training_answers[key]))
 
     keys = test_data.keys()
     num_correct = 0
@@ -207,12 +205,7 @@ if __name__ == "__main__":
 
         print_if_not_debug(debug, key, correct_answer)
         if debug:
-            if correct_answer == answers[key]:
+            if correct_answer == test_answers[key]:
                 num_correct += 1
-        num_happy = 0
-        num_sad = 0
-        num_mis = 0
-        num_mad = 0
-
     if debug:
-        print("percept was ", num_correct, " out of", len(answers), "correct after training.")
+        print("percept was ", num_correct, " out of", len(test_data), "correct after training.")
