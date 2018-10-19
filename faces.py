@@ -39,6 +39,8 @@ import sys
 import file_parser as parser
 import numpy as np
 import random
+import math
+import copy
 
 
 class Perceptron:
@@ -59,10 +61,14 @@ class Perceptron:
             weight_list.append(random.uniform(-1, 1))
         return weight_list
 
-    def calculate_output(self, input_data):
+    def sigmoid(self, x):
+        return math.exp(-np.logaddexp(0, -x))
+
+    def activation_function(self, input_data):
         self.input_data = input_data
         activation = self.calculate_sum()
-        return 1 if activation > self.activation_limit else -1
+        # return 1 if activation > self.activation_limit else -1
+        return self.sigmoid(activation)
 
     def learn_from_result(self, output_result, actual_result):
         error = actual_result - output_result
@@ -70,24 +76,25 @@ class Perceptron:
             self.weights[i] = self.weights[i] + self.input_data[i] * error * self.learning_rate
 
     def train(self, input_data, desired_output):
-        guess = self.calculate_output(input_data)
+
+        guess = self.activation_function(input_data)
         self.learn_from_result(guess, desired_output)
 
 
 def get_desired_val_for_happy(val):
-    return 1 if val == 1 else -1
+    return 1 if val == 1 else 0
 
 
 def get_desired_val_for_sad(val):
-    return 1 if val == 2 else -1
+    return 1 if val == 2 else 0
 
 
 def get_desired_val_for_mischievous(val):
-    return 1 if val == 3 else -1
+    return 1 if val == 3 else 0
 
 
 def get_desired_val_for_mad(val):
-    return 1 if val == 4 else -1
+    return 1 if val == 4 else 0
 
 
 def print_if_not_debug(debug, key, val):
@@ -103,6 +110,15 @@ def normalize_list(data):
     for key2 in data:
         for i in range(0, len(data[key2])):
             if data[key2][i] > 10:
+                data[key2][i] = 1
+            else:
+                data[key2][i] = 0
+
+
+def normalize_list_eyebrows(data):
+    for key2 in data:
+        for i in range(0, len(data[key2])):
+            if data[key2][i] == 31:
                 data[key2][i] = 1
             else:
                 data[key2][i] = 0
@@ -137,7 +153,7 @@ if __name__ == "__main__":
     train_data_labels = sys.argv[2]
     test_data = sys.argv[3]
 
-    debug = False
+    debug = True
 
     train_data = parser.create_dictionary_for_images(train_data)
     training_answers = parser.create_dictionary_for_labels(train_data_labels)
@@ -145,38 +161,92 @@ if __name__ == "__main__":
         test_answers = parser.create_dictionary_for_labels("test_answers.txt")
     test_data = parser.create_dictionary_for_images(test_data)
 
-    for key in train_data:
-        train_data[key] = np.reshape(train_data[key], (20, 20))
-        numrots = rotate_smiley(train_data[key])
-        train_data[key] = np.rot90(train_data[key], numrots)
-        train_data[key] = train_data[key].ravel()
-
-    for key in test_data:
-        test_data[key] = np.reshape(test_data[key], (20, 20))
-        numrots = rotate_smiley(test_data[key])
-        test_data[key] = np.rot90(test_data[key], numrots)
-        test_data[key] = test_data[key].ravel()
+    flip_data = parser.create_dictionary_for_images("flip_training.txt")
+    flip_data_answers = parser.create_dictionary_for_labels("flip_answers.txt")
 
     normalize_list(train_data)
     normalize_list(test_data)
 
-    learning_rate = 1
+    learning_rate = 0.5
     size_of_data = 400
 
     size_of_data_hidden = 4
 
-    percept_happy = [Perceptron(learning_rate, size_of_data) for _ in range(0, 12)]
-    percept_sad = [Perceptron(learning_rate, size_of_data) for _ in range(0, 12)]
-    percept_mischievous = [Perceptron(learning_rate, size_of_data) for _ in range(0, 12)]
-    percept_mad = [Perceptron(learning_rate, size_of_data) for _ in range(0, 12)]
+    normalize_list_eyebrows(flip_data)
+
+    percept_rotate_zero = Perceptron(learning_rate, size_of_data)
+    percept_rotate_one = Perceptron(learning_rate, size_of_data)
+    percept_rotate_two = Perceptron(learning_rate, size_of_data)
+    percept_rotate_three = Perceptron(learning_rate, size_of_data)
+
+    train_data_copy = copy.copy(train_data)
+    test_data_copy = copy.copy(test_data)
+
+    normalize_list_eyebrows(train_data_copy)
+    normalize_list_eyebrows(test_data_copy)
+
+    for _ in range(0, 1):
+        for key in flip_data:
+            percept_rotate_zero.train(flip_data[key], get_desired_val_for_happy(flip_data_answers[key] + 1))
+            percept_rotate_one.train(flip_data[key], get_desired_val_for_happy(flip_data_answers[key] + 1))
+            percept_rotate_two.train(flip_data[key], get_desired_val_for_happy(flip_data_answers[key] + 1))
+            percept_rotate_three.train(flip_data[key], get_desired_val_for_happy(flip_data_answers[key] + 1))
+
+    for key1 in train_data:
+        rot_zero = percept_rotate_zero.activation_function(train_data_copy[key1])
+        rot_one = percept_rotate_one.activation_function(train_data_copy[key1])
+        rot_two = percept_rotate_two.activation_function(train_data_copy[key1])
+        rot_three = percept_rotate_three.activation_function(train_data_copy[key1])
+
+        if rot_zero > max(rot_one, rot_two, rot_three):
+            numrots = 0
+        elif rot_one > max(rot_two, rot_three):
+            numrots = 1
+        elif rot_two > rot_three:
+            numrots = 2
+        else:
+            numrots = 3
+
+        train_data[key1] = np.reshape(train_data[key1], (20, 20))
+        train_data[key1] = np.rot90(train_data[key1], numrots)
+        train_data[key1] = train_data[key1].ravel()
+
+        # print key1
+        # print rot_zero
+        # print rot_two
+        # print
+
+    for key1 in test_data:
+        rot_zero = percept_rotate_zero.activation_function(test_data_copy[key1])
+        rot_one = percept_rotate_one.activation_function(test_data_copy[key1])
+        rot_two = percept_rotate_two.activation_function(test_data_copy[key1])
+        rot_three = percept_rotate_three.activation_function(test_data_copy[key1])
+
+        if rot_zero > max(rot_one, rot_two, rot_three):
+            numrots = 0
+        elif rot_one > max(rot_two, rot_three):
+            numrots = 1
+        elif rot_two > rot_three:
+            numrots = 2
+        else:
+            numrots = 3
+
+
+        test_data[key1] = np.reshape(test_data[key1], (20, 20))
+        test_data[key1] = np.rot90(test_data[key1], numrots)
+        test_data[key1] = test_data[key1].ravel()
+
+    percept_happy = Perceptron(learning_rate, size_of_data)
+    percept_sad = Perceptron(learning_rate, size_of_data)
+    percept_mischievous = Perceptron(learning_rate, size_of_data)
+    percept_mad = Perceptron(learning_rate, size_of_data)
 
     for _ in range(0, 5):
         for key in train_data:
-            for happy, sad, mis, mad in zip(percept_happy, percept_sad, percept_mischievous, percept_mad):
-                happy.train(train_data[key], get_desired_val_for_happy(training_answers[key]))
-                sad.train(train_data[key], get_desired_val_for_sad(training_answers[key]))
-                mis.train(train_data[key], get_desired_val_for_mischievous(training_answers[key]))
-                mad.train(train_data[key], get_desired_val_for_mad(training_answers[key]))
+            percept_happy.train(train_data[key], get_desired_val_for_happy(training_answers[key]))
+            percept_sad.train(train_data[key], get_desired_val_for_sad(training_answers[key]))
+            percept_mischievous.train(train_data[key], get_desired_val_for_mischievous(training_answers[key]))
+            percept_mad.train(train_data[key], get_desired_val_for_mad(training_answers[key]))
 
     keys = test_data.keys()
     num_correct = 0
@@ -188,11 +258,10 @@ if __name__ == "__main__":
         num_mis = 0
         num_mad = 0
 
-        for happy, sad, mis, mad in zip(percept_happy, percept_sad, percept_mischievous, percept_mad):
-            num_happy += happy.calculate_output(test_data[key])
-            num_sad += sad.calculate_output(test_data[key])
-            num_mis += mis.calculate_output(test_data[key])
-            num_mad += mad.calculate_output(test_data[key])
+        num_happy += percept_happy.activation_function(test_data[key])
+        num_sad += percept_sad.activation_function(test_data[key])
+        num_mis += percept_mischievous.activation_function(test_data[key])
+        num_mad += percept_mad.activation_function(test_data[key])
 
         if num_happy > max(num_sad, num_mis, num_mad):
             correct_answer = 1
