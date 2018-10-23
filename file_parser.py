@@ -1,6 +1,6 @@
 import numpy as np
 
-# dict = {'Image1' : []}
+# Returns dictionary for images
 def create_dictionary_for_images(filename):
     image_dictionary = {}
     dict_index = 0
@@ -24,7 +24,7 @@ def create_dictionary_for_images(filename):
     return image_dictionary
 
 
-# dict = {'Image1' : '1}
+# Returns dictionary for lables
 def create_dictionary_for_labels(filename):
     label_dictionary = {}
 
