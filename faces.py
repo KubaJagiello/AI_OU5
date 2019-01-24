@@ -3,6 +3,7 @@ import file_parser as parser
 import numpy as np
 import random
 import math
+from PIL import Image
 
 '''
     Perceptron object that has
@@ -95,7 +96,7 @@ def should_rotate(list_to_rotate):
 if __name__ == "__main__":
 
     # For debug purposes
-    debug = False
+    debug = True
 
     train_data = parser.create_dictionary_for_images(sys.argv[1])
     training_answers = parser.create_dictionary_for_labels(sys.argv[2])
@@ -166,3 +167,17 @@ if __name__ == "__main__":
                 num_correct += 1
     if debug:
         print("percept was ", num_correct, " out of", len(test_data), "correct after training.")
+
+
+        width = 20
+        height = 20
+        background = (255, 255, 255, 255)
+        image = Image.new("RGBA", (width, height), background)
+        pixels = image.load()
+        happyWeights = np.reshape(mischievous.weights, (20, 20))
+        print(happyWeights)
+        for i in range(20):
+            for j in range(20):
+                grayscale = int(round(255 - 255 * happyWeights[i, j]))
+                pixels[i, j] = (grayscale, grayscale, grayscale)
+                image.save("mis_image.png")
